@@ -31,6 +31,11 @@ namespace MoistAutomata
             set => Cells[point.X, point.Y] = value;
         }
 
+        public int this[(int x, int y) point] {
+            get => Cells[point.x, point.y];
+            set => Cells[point.x, point.y] = value;
+        }
+
         public int this[int x, int y]
         {
             get => Cells[x, y];

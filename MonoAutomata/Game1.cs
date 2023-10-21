@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MoistAutomata;
 using System;
+using System.Linq;
 
 namespace MonoAutomata
 {
@@ -11,6 +12,9 @@ namespace MonoAutomata
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private CellGrid grid;
+        private KeyboardStates _keyboard = new KeyboardStates();
+
+        bool _running = true;
 
         int cellSize = 10;
         int Width = 100;
@@ -27,7 +31,7 @@ namespace MonoAutomata
             _graphics.PreferredBackBufferHeight = cellSize * Height;
             _graphics.ApplyChanges();
 
-            grid = new CellGrid(Width, Height, this.GameOfLife);
+            grid = new CellGrid(Width, Height, GameOfLife);
         }
 
         protected override void Initialize()
@@ -50,7 +54,7 @@ namespace MonoAutomata
                 point.Up().Left() + point.Up() + point.Up().Right() +
                 point.Left() + point.Right() +
                 point.Down().Left() + point.Down() + point.Down().Right();
-           
+
             return point == 1 ?
                 neighbours < 2 ? 0  // Any live cell with fewer than two live neighbours dies, as if by underpopulation.
                 : neighbours >= 2 && neighbours <= 3 ? 1 // Any live cell with two or three live neighbours lives on to the next generation.
@@ -64,26 +68,54 @@ namespace MonoAutomata
 
             // Create a 1px square rectangle texture that will be scaled to the
             // desired size and tinted the desired color at draw time
-            whiteRectangle = new Texture2D(GraphicsDevice, 1,1);
+            whiteRectangle = new Texture2D(GraphicsDevice, 1, 1);
             whiteRectangle.SetData(new[] { Color.White });
             // TODO: use this.Content to load your game content here
         }
+
+        public (int x, int y) PointToGrid(int x, int y) => ((int)Math.Floor((float)x / cellSize), (int)Math.Floor((float)y / cellSize));
 
 
         double ElapsedSinceLastUpdate = 0;
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+
+            _keyboard.UpdateState();
+
+            if (_keyboard.KeyPressed(Keys.Escape))
                 Exit();
 
-            ElapsedSinceLastUpdate += gameTime.ElapsedGameTime.TotalSeconds;
+            if (_keyboard.KeyPressed(Keys.Space))
+                _running = !_running;
 
-            if (ElapsedSinceLastUpdate > .1) {
-                grid.Step();
-                ElapsedSinceLastUpdate = 0;
+            var mouseState = Mouse.GetState();
+
+            if (mouseState.X >= 0 && mouseState.X < Window.ClientBounds.Width &&
+                mouseState.Y >= 0 && mouseState.Y < Window.ClientBounds.Height)
+            {
+                if (mouseState.LeftButton == ButtonState.Pressed)
+                {
+                    grid[PointToGrid(mouseState.X, mouseState.Y)] = 1;
+                }
+
+                if (mouseState.RightButton == ButtonState.Pressed)
+                {
+                    grid[PointToGrid(mouseState.X, mouseState.Y)] = 0;
+                }
+
             }
+            if (_running)
+            {
+                ElapsedSinceLastUpdate += gameTime.ElapsedGameTime.TotalSeconds;
 
-            base.Update(gameTime);
+                if (ElapsedSinceLastUpdate > .1)
+                {
+                    grid.Step();
+                    ElapsedSinceLastUpdate = 0;
+                }
+
+                base.Update(gameTime);
+            }
         }
 
         protected override void Draw(GameTime gameTime)
